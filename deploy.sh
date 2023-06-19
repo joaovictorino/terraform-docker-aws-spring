@@ -2,7 +2,7 @@
 
 docker build -t springapp .
 
-docker tag springapp:latest 475154562783.dkr.ecr.us-east-1.amazonaws.com/producao:latest
+docker tag springapp:latest 475154562783.dkr.ecr.us-east-1.amazonaws.com/springapp:latest
 
 cd terraform
 
