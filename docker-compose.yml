@@ -1,0 +1,31 @@
+version: "3"
+
+networks:
+  petclinic:
+    driver: bridge
+
+volumes:
+  myapp:
+
+services:
+  mysqldb:
+    image: mysql:8.0
+    restart: always
+    networks:
+      - petclinic
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=petclinic
+      - MYSQL_TCP_PORT=3306
+
+  app:
+    build: .
+    restart: always
+    networks:
+      - petclinic
+    ports:
+      - 80:80
+    volumes:
+      - myapp:/home
+    depends_on:
+      - mysqldb
