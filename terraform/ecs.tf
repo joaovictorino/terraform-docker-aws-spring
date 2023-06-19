@@ -25,8 +25,8 @@ resource "aws_ecs_task_definition" "web" {
   container_definitions    = data.template_file.web_task.rendered
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "1"
-  memory                   = "2"
+  cpu                      = "1024"
+  memory                   = "2048"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
   task_role_arn            = aws_iam_role.ecs_execution_role.arn
 }
@@ -76,7 +76,7 @@ resource "aws_security_group" "web_inbound_sg" {
 
 resource "aws_alb" "alb_springapp" {
   name            = "production-alb-springapp"
-  subnets         = [aws_subnet.public_subnet.*.id]
+  subnets         = [aws_subnet.public_subnet.0.id, aws_subnet.public_subnet.1.id]
   security_groups = [aws_security_group.default.id, aws_security_group.web_inbound_sg.id]
 }
 
@@ -172,7 +172,7 @@ resource "aws_ecs_service" "web" {
 
   network_configuration {
     security_groups = [aws_security_group.default.id, aws_security_group.ecs_service.id]
-    subnets         = [aws_subnet.private_subnet.*.id]
+    subnets         = [aws_subnet.private_subnet.0.id, aws_subnet.private_subnet.1.id]
   }
 
   load_balancer {
