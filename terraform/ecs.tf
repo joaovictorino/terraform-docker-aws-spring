@@ -4,6 +4,7 @@ resource "aws_cloudwatch_log_group" "springapp" {
 
 resource "aws_ecr_repository" "springapp" {
   name = "springapp"
+  force_delete = true
 }
 
 resource "aws_ecs_cluster" "cluster" {
