@@ -20,12 +20,16 @@
     },
     "environment": [
       {
-        "name": "DATABASE_URL",
-        "value": "${database_url}"
+        "name": "MYSQL_URL",
+        "value": "${mysql_url}"
       },
       {
-        "name": "PORT",
-        "value": "80"
+        "name": "MYSQL_USER",
+        "value": "${mysql_user}"
+      },
+      {
+        "name": "MYSQL_PASS",
+        "value": "${mysql_pass}"
       }
     ]
   }

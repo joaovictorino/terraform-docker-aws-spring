@@ -15,8 +15,10 @@ data "template_file" "web_task" {
 
   vars = {
     image        = aws_ecr_repository.springapp.repository_url
-    database_url = "mysql://petclinic:petclinic@${aws_db_instance.rds.address}:3306/petclinic"
     log_group    = aws_cloudwatch_log_group.springapp.name
+    mysql_url    = "jdbc:mysql://${aws_db_instance.rds.address}:3306/petclinic"
+    mysql_user   = "petclinic"
+    mysql_pass   = "petclinic"
   }
 }
 
