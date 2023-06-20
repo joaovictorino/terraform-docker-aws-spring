@@ -3,7 +3,7 @@ resource "aws_cloudwatch_log_group" "springapp" {
 }
 
 resource "aws_ecr_repository" "springapp" {
-  name = "springapp"
+  name         = "springapp"
   force_delete = true
 }
 
@@ -15,11 +15,11 @@ data "template_file" "web_task" {
   template = file("web_task_definition.json")
 
   vars = {
-    image        = aws_ecr_repository.springapp.repository_url
-    log_group    = aws_cloudwatch_log_group.springapp.name
-    mysql_url    = "jdbc:mysql://${aws_db_instance.rds.address}:3306/petclinic"
-    mysql_user   = "petclinic"
-    mysql_pass   = "petclinic"
+    image      = aws_ecr_repository.springapp.repository_url
+    log_group  = aws_cloudwatch_log_group.springapp.name
+    mysql_url  = "jdbc:mysql://${aws_db_instance.rds.address}/petclinic"
+    mysql_user = "petclinic"
+    mysql_pass = "petclinic"
   }
 }
 
@@ -79,8 +79,8 @@ resource "aws_security_group" "web_inbound_sg" {
 
 resource "aws_alb" "alb_springapp" {
   name            = "production-alb-springapp"
-  subnets         = [aws_subnet.public_subnet.0.id, aws_subnet.public_subnet.1.id]
-  security_groups = [aws_security_group.default.id, aws_security_group.web_inbound_sg.id]
+  subnets         = aws_subnet.public_subnet.*.id
+  security_groups = [aws_security_group.web_inbound_sg.id]
 }
 
 resource "aws_alb_listener" "springapp" {
@@ -160,6 +160,14 @@ resource "aws_security_group" "ecs_service" {
     protocol    = "icmp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
 }
 
 data "aws_ecs_task_definition" "web" {
@@ -174,8 +182,8 @@ resource "aws_ecs_service" "web" {
   cluster         = aws_ecs_cluster.cluster.id
 
   network_configuration {
-    security_groups = [aws_security_group.default.id, aws_security_group.ecs_service.id]
-    subnets         = [aws_subnet.private_subnet.0.id, aws_subnet.private_subnet.1.id]
+    security_groups = [aws_security_group.ecs_service.id]
+    subnets         = aws_subnet.private_subnet.*.id
   }
 
   load_balancer {
@@ -186,83 +194,3 @@ resource "aws_ecs_service" "web" {
 
   depends_on = [aws_alb_target_group.alb_target_group, aws_iam_role_policy.ecs_service_role_policy]
 }
-
-#resource "aws_iam_role" "ecs_autoscale_role" {
-#  name               = "${var.environment}_ecs_autoscale_role"
-#  assume_role_policy = "${file("${path.module}/policies/ecs-autoscale-role.json")}"
-#}
-#
-#resource "aws_iam_role_policy" "ecs_autoscale_role_policy" {
-#  name   = "ecs_autoscale_role_policy"
-#  policy = "${file("${path.module}/policies/ecs-autoscale-role-policy.json")}"
-#  role   = "${aws_iam_role.ecs_autoscale_role.id}"
-#}
-#
-#resource "aws_appautoscaling_target" "target" {
-#  service_namespace  = "ecs"
-#  resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.web.name}"
-#  scalable_dimension = "ecs:service:DesiredCount"
-#  role_arn           = "${aws_iam_role.ecs_autoscale_role.arn}"
-#  min_capacity       = 2
-#  max_capacity       = 4
-#}
-#
-#resource "aws_appautoscaling_policy" "up" {
-#  name                    = "${var.environment}_scale_up"
-#  service_namespace       = "ecs"
-#  resource_id             = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.web.name}"
-#  scalable_dimension      = "ecs:service:DesiredCount"
-#
-#
-#  step_scaling_policy_configuration {
-#    adjustment_type         = "ChangeInCapacity"
-#    cooldown                = 60
-#    metric_aggregation_type = "Maximum"
-#
-#    step_adjustment {
-#      metric_interval_lower_bound = 0
-#      scaling_adjustment = 1
-#    }
-#  }
-#
-#  depends_on = ["aws_appautoscaling_target.target"]
-#}
-#
-#resource "aws_appautoscaling_policy" "down" {
-#  name                    = "${var.environment}_scale_down"
-#  service_namespace       = "ecs"
-#  resource_id             = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.web.name}"
-#  scalable_dimension      = "ecs:service:DesiredCount"
-#
-#  step_scaling_policy_configuration {
-#    adjustment_type         = "ChangeInCapacity"
-#    cooldown                = 60
-#    metric_aggregation_type = "Maximum"
-#
-#    step_adjustment {
-#      metric_interval_lower_bound = 0
-#      scaling_adjustment = -1
-#    }
-#  }
-#
-#  depends_on = ["aws_appautoscaling_target.target"]
-#} 
-#
-#resource "aws_cloudwatch_metric_alarm" "service_cpu_high" {
-#  alarm_name          = "${var.environment}_openjobs_web_cpu_utilization_high"
-#  comparison_operator = "GreaterThanOrEqualToThreshold"
-#  evaluation_periods  = "2"
-#  metric_name         = "CPUUtilization"
-#  namespace           = "AWS/ECS"
-#  period              = "60"
-#  statistic           = "Maximum"
-#  threshold           = "85"
-#
-#  dimensions {
-#    ClusterName = "${aws_ecs_cluster.cluster.name}"
-#    ServiceName = "${aws_ecs_service.web.name}"
-#  }
-#
-#  alarm_actions = ["${aws_appautoscaling_policy.up.arn}"]
-#  ok_actions    = ["${aws_appautoscaling_policy.down.arn}"]
-#}
