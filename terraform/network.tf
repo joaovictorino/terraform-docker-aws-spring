@@ -6,7 +6,7 @@ resource "aws_vpc" "vpc" {
 
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.vpc.id
-  count                   = length(["10.0.1.0/24", "10.0.2.0/24"])
+  count                   = 2
   cidr_block              = element(["10.0.1.0/24", "10.0.2.0/24"], count.index)
   availability_zone       = element(["us-east-1a", "us-east-1b"], count.index)
   map_public_ip_on_launch = true
@@ -14,7 +14,7 @@ resource "aws_subnet" "public_subnet" {
 
 resource "aws_subnet" "private_subnet" {
   vpc_id                  = aws_vpc.vpc.id
-  count                   = length(["10.0.10.0/24", "10.0.20.0/24"])
+  count                   = 2
   cidr_block              = element(["10.0.10.0/24", "10.0.20.0/24"], count.index)
   availability_zone       = element(["us-east-1a", "us-east-1b"], count.index)
   map_public_ip_on_launch = false
@@ -41,15 +41,13 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_eip" "nat_eip" {
-  count      = 2
   domain     = "vpc"
   depends_on = [aws_internet_gateway.ig]
 }
 
 resource "aws_nat_gateway" "nat" {
-  count         = length(aws_subnet.public_subnet)
-  allocation_id = element(aws_eip.nat_eip.*.id, count.index)
-  subnet_id     = element(aws_subnet.public_subnet.*.id, count.index)
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_subnet.0.id
   depends_on    = [aws_internet_gateway.ig]
 }
 
@@ -58,10 +56,9 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route" "private_nat_gateway" {
-  count                  = 2
   route_table_id         = aws_route_table.private.id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = element(aws_nat_gateway.nat.*.id, count.index)
+  nat_gateway_id         = aws_nat_gateway.nat.id
 }
 
 resource "aws_route_table_association" "private" {

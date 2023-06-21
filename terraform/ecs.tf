@@ -11,27 +11,51 @@ resource "aws_ecs_cluster" "cluster" {
   name = "production-ecs-cluster"
 }
 
-data "template_file" "web_task" {
-  template = file("web_task_definition.json")
-
-  vars = {
-    image      = aws_ecr_repository.springapp.repository_url
-    log_group  = aws_cloudwatch_log_group.springapp.name
-    mysql_url  = "jdbc:mysql://${aws_db_instance.rds.address}/petclinic"
-    mysql_user = "petclinic"
-    mysql_pass = "petclinic"
-  }
-}
-
 resource "aws_ecs_task_definition" "web" {
-  family                   = "spring_web"
-  container_definitions    = data.template_file.web_task.rendered
+  family = "spring_web"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "1024"
   memory                   = "2048"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
   task_role_arn            = aws_iam_role.ecs_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name  = "web"
+      image = aws_ecr_repository.springapp.repository_url
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+        }
+      ]
+      memory      = 2048
+      networkMode = "awsvpc"
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.springapp.name
+          awslogs-region        = "us-east-1"
+          awslogs-stream-prefix = "web"
+        }
+      }
+      environment = [
+        {
+          name  = "MYSQL_URL",
+          value = "jdbc:mysql://${aws_db_instance.rds.address}/petclinic"
+        },
+        {
+          name  = "MYSQL_USER",
+          value = "petclinic"
+        },
+        {
+          name  = "MYSQL_PASS"
+          value = "petclinic"
+        }
+      ]
+    }
+  ])
 }
 
 resource "random_id" "target_group_sufix" {
@@ -132,14 +156,44 @@ resource "aws_iam_role_policy" "ecs_service_role_policy" {
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
-  name               = "ecs_task_execution_role"
-  assume_role_policy = file("ecs-task-execution-role.json")
+  name = "ecs_task_execution_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = ["ec2.amazonaws.com",
+          "ecs-tasks.amazonaws.com"]
+        }
+      },
+    ]
+  })
 }
 
 resource "aws_iam_role_policy" "ecs_execution_role_policy" {
-  name   = "ecs_execution_role_policy"
-  policy = file("ecs-execution-role-policy.json")
-  role   = aws_iam_role.ecs_execution_role.id
+  name = "ecs_execution_role_policy"
+  role = aws_iam_role.ecs_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
 }
 
 resource "aws_security_group" "ecs_service" {
