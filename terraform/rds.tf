@@ -35,7 +35,7 @@ resource "aws_db_instance" "rds" {
   engine                  = "mysql"
   engine_version          = "8.0"
   port                    = "3306"
-  instance_class          = "db.t2.micro"
+  instance_class          = "db.t3.micro"
   multi_az                = false
   db_name                 = "petclinic"
   username                = "petclinic"

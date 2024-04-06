@@ -1,5 +1,3 @@
-version: "3"
-
 networks:
   petclinic:
     driver: bridge
@@ -22,6 +20,8 @@ services:
     restart: always
     networks:
       - petclinic
+    environment:
+      - MYSQL_URL=jdbc:mysql://mysqldb/petclinic
     ports:
       - 80:80
     volumes:
