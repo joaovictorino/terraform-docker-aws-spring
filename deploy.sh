@@ -2,7 +2,8 @@
 
 docker build -t springapp .
 
-docker tag springapp:latest 475154562783.dkr.ecr.us-east-1.amazonaws.com/springapp:latest
+aws_account_id=$(aws sts get-caller-identity --query Account --output text)
+docker tag springapp:latest $aws_account_id.dkr.ecr.us-east-1.amazonaws.com/springapp:latest
 
 cd terraform
 

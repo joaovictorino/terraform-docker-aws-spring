@@ -1,4 +1,4 @@
-# Terraform ambiente PaaS na AWS, usando RDS, ECS Fargate e App Runner
+# Terraform ambiente PaaS na AWS, usando RDS e ECS Fargate
 
 Pré-requisitos
 
@@ -26,7 +26,8 @@ docker build -t springapp .
 Renomear a imagem
 
 ```sh
-docker tag springapp:latest 475154562783.dkr.ecr.us-east-1.amazonaws.com/springapp:latest
+aws_account_id=$(aws sts get-caller-identity --query Account --output text)
+docker tag springapp:latest $aws_account_id.dkr.ecr.us-east-1.amazonaws.com/springapp:latest
 ```
 
 Executar o Terraform
